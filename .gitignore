@@ -7,10 +7,17 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 dist
 dist-ssr
-*.local
+
+# Env files (never commit secrets)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Editor directories and files
 .vscode/*
@@ -23,11 +30,12 @@ dist-ssr
 *.sln
 *.sw?
 
+# Config
 .config/
-!.env
 
 # Local Netlify folder
 .netlify
-.env.local
 
+# Vercel deployment
 .vercel
+
