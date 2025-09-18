@@ -1,12 +1,16 @@
 import path from "path";
+import express from "express";   // ✅ Correct default import
+import { fileURLToPath } from "url";
 import { createServer } from "./index";
-import * as express from "express";
+
+// ✅ Recreate __dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = createServer();
 const port = process.env.PORT || 3000;
 
 // In production, serve the built SPA files
-const __dirname = import.meta.dirname;
 const distPath = path.join(__dirname, "../spa");
 
 // Serve static files
@@ -38,3 +42,5 @@ process.on("SIGINT", () => {
   console.log("🛑 Received SIGINT, shutting down gracefully");
   process.exit(0);
 });
+
+
