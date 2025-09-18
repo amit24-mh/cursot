@@ -1,8 +1,11 @@
 import mongoose, { Schema, Types } from "mongoose";
 
+/* ======================
+   VOTER MODEL
+====================== */
 export interface IVoter {
   _id: Types.ObjectId;
-  walletAddress: string; // lowercased
+  walletAddress: string; // always stored lowercase
   name?: string;
   nationalId?: string;
   email?: string;
@@ -11,18 +14,32 @@ export interface IVoter {
   nonce?: string; // for auth challenge
 }
 
-const VoterSchema = new Schema<IVoter>({
-  walletAddress: { type: String, required: true, unique: true, index: true },
-  name: { type: String },
-  nationalId: { type: String },
-  email: { type: String },
-  registeredAt: { type: Date, default: () => new Date() },
-  lastLoginAt: { type: Date },
-  nonce: { type: String },
-});
+const VoterSchema = new Schema<IVoter>(
+  {
+    walletAddress: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+      lowercase: true, // enforce lowercase
+      trim: true,
+    },
+    name: { type: String, trim: true },
+    nationalId: { type: String, trim: true },
+    email: { type: String, trim: true },
+    nonce: { type: String },
+  },
+  {
+    timestamps: { createdAt: "registeredAt", updatedAt: "lastLoginAt" },
+  }
+);
 
-export const VoterModel = mongoose.models.Voter || mongoose.model<IVoter>("Voter", VoterSchema);
+export const VoterModel =
+  mongoose.models.Voter || mongoose.model<IVoter>("Voter", VoterSchema);
 
+/* ======================
+   VOTE MODEL
+====================== */
 export interface IVote {
   _id: Types.ObjectId;
   voter: Types.ObjectId;
@@ -33,17 +50,37 @@ export interface IVote {
   blockHash?: string; // hash of block containing this vote
 }
 
-const VoteSchema = new Schema<IVote>({
-  voter: { type: Schema.Types.ObjectId, ref: "Voter", required: true, index: true },
-  electionId: { type: String, required: true, index: true },
-  candidateId: { type: String, required: true },
-  timestamp: { type: Date, default: () => new Date() },
-  payloadHash: { type: String, required: true },
-  blockHash: { type: String },
-});
+const VoteSchema = new Schema<IVote>(
+  {
+    voter: {
+      type: Schema.Types.ObjectId,
+      ref: "Voter",
+      required: true,
+      index: true,
+    },
+    electionId: { type: String, required: true, index: true, trim: true },
+    candidateId: { type: String, required: true, trim: true },
+    payloadHash: {
+      type: String,
+      required: true,
+      match: /^0x[a-fA-F0-9]{64}$/, // enforce keccak256 hex string
+    },
+    blockHash: { type: String, match: /^0x[a-fA-F0-9]{64}$/ },
+  },
+  {
+    timestamps: { createdAt: "timestamp" },
+  }
+);
 
-export const VoteModel = mongoose.models.Vote || mongoose.model<IVote>("Vote", VoteSchema);
+// ✅ Prevent duplicate votes per election
+VoteSchema.index({ voter: 1, electionId: 1 }, { unique: true });
 
+export const VoteModel =
+  mongoose.models.Vote || mongoose.model<IVote>("Vote", VoteSchema);
+
+/* ======================
+   BLOCK MODEL
+====================== */
 export interface IBlock {
   _id: Types.ObjectId;
   index: number;
@@ -56,15 +93,34 @@ export interface IBlock {
   votes: Types.ObjectId[]; // vote ids included
 }
 
-const BlockSchema = new Schema<IBlock>({
-  index: { type: Number, required: true, unique: true },
-  prevHash: { type: String, required: true },
-  timestamp: { type: Date, default: () => new Date() },
-  merkleRoot: { type: String, required: true },
-  hash: { type: String, required: true, unique: true },
-  signerAddress: { type: String },
-  signature: { type: String },
-  votes: [{ type: Schema.Types.ObjectId, ref: "Vote" }],
-});
+const BlockSchema = new Schema<IBlock>(
+  {
+    index: { type: Number, required: true, unique: true },
+    prevHash: {
+      type: String,
+      required: true,
+      match: /^0x[a-fA-F0-9]{64}$/,
+    },
+    merkleRoot: {
+      type: String,
+      required: true,
+      match: /^0x[a-fA-F0-9]{64}$/,
+    },
+    hash: {
+      type: String,
+      required: true,
+      unique: true,
+      match: /^0x[a-fA-F0-9]{64}$/,
+    },
+    signerAddress: { type: String, lowercase: true, trim: true },
+    signature: { type: String },
+    votes: [{ type: Schema.Types.ObjectId, ref: "Vote" }],
+  },
+  {
+    timestamps: { createdAt: "timestamp" },
+  }
+);
 
-export const BlockModel = mongoose.models.Block || mongoose.model<IBlock>("Block", BlockSchema);
+export const BlockModel =
+  mongoose.models.Block || mongoose.model<IBlock>("Block", BlockSchema);
+
